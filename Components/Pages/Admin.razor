@@ -1,0 +1,283 @@
+@page "/admin"
+@rendermode RenderMode.InteractiveServer
+@inject MenuService MenuService
+@inject AuthService AuthService
+@inject NavigationManager Nav
+
+<PageTitle>Administración - La Casa Peruana</PageTitle>
+
+@if (!AuthService.EstaAutenticado)
+{
+    <div class="auth-page">
+        <div class="auth-card">
+            <p>Debes <a href="/login">iniciar sesión</a> para acceder.</p>
+        </div>
+    </div>
+    return;
+}
+
+<div class="admin-page">
+    <div class="admin-header">
+        <div>
+            <h1 class="admin-title">Administración del Menú</h1>
+            <p class="admin-sub">Gestiona los platos, precios y disponibilidad.</p>
+        </div>
+        <button class="btn-primary" @onclick="AbrirModalNuevo">
+            + Nuevo Plato
+        </button>
+    </div>
+
+    <!-- Category Filter -->
+    <div class="category-tabs-wrapper">
+        <div class="category-tabs">
+            <button class="@(filtroCategoria == "" ? "tab active" : "tab")" @onclick='() => SetFiltro("")'>
+                Todos
+            </button>
+            @foreach (var cat in categorias)
+            {
+                <button class="@(filtroCategoria == cat ? "tab active" : "tab")" @onclick="() => SetFiltro(cat)">
+                    @GetLabel(cat)
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (todosItems == null)
+    {
+        <div class="loading-state"><div class="spinner"></div><p>Cargando...</p></div>
+    }
+    else
+    {
+        var items = string.IsNullOrEmpty(filtroCategoria)
+            ? todosItems
+            : todosItems.Where(i => i.Categoria == filtroCategoria).ToList();
+
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Imagen</th>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in items)
+                    {
+                        <tr class="@(!item.Disponible ? "row-agotado" : "")">
+                            <td>
+                                <img class="table-thumb" src="@item.ImagenUrl" alt="@item.Nombre" />
+                            </td>
+                            <td>
+                                <div class="table-name">@item.Nombre</div>
+                                <div class="table-desc">@(item.Descripcion.Length > 60 ? item.Descripcion[..60] + "…" : item.Descripcion)</div>
+                            </td>
+                            <td><span class="cat-badge">@GetLabel(item.Categoria)</span></td>
+                            <td class="price-cell">S/. @item.Precio.ToString("0.00")</td>
+                            <td>
+                                <button class="toggle-btn @(item.Disponible ? "disponible" : "agotado-btn")"
+                                        @onclick="() => ToggleDisponibilidad(item)">
+                                    @(item.Disponible ? "✓ Disponible" : "✗ Agotado")
+                                </button>
+                            </td>
+                            <td class="actions-cell">
+                                <button class="btn-icon edit" @onclick="() => AbrirModalEditar(item)" title="Editar">✏</button>
+                                <button class="btn-icon delete" @onclick="() => ConfirmarEliminar(item)" title="Eliminar">🗑</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Modal: Crear/Editar -->
+@if (mostrarModal)
+{
+    <div class="modal-overlay" @onclick="CerrarModal">
+        <div class="modal" @onclick:stopPropagation>
+            <div class="modal-header">
+                <h2>@(editando ? "Editar Plato" : "Nuevo Plato")</h2>
+                <button class="modal-close" @onclick="CerrarModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Nombre *</label>
+                        <input class="form-input" @bind="form.Nombre" placeholder="Ej: Lomo Saltado" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Categoría *</label>
+                        <select class="form-input" @bind="form.Categoria">
+                            @foreach (var cat in categorias)
+                            {
+                                <option value="@cat">@GetLabel(cat)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group form-full">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-input form-textarea" @bind="form.Descripcion" placeholder="Descripción del plato..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Precio (S/.) *</label>
+                        <input class="form-input" type="number" step="0.50" min="0" @bind="form.Precio" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Orden</label>
+                        <input class="form-input" type="number" min="0" @bind="form.Orden" />
+                    </div>
+                    <div class="form-group form-full">
+                        <label class="form-label">URL de Imagen</label>
+                        <input class="form-input" @bind="form.ImagenUrl" placeholder="https://..." />
+                    </div>
+                    @if (!string.IsNullOrEmpty(form.ImagenUrl))
+                    {
+                        <div class="form-group form-full">
+                            <label class="form-label">Vista previa</label>
+                            <img class="img-preview" src="@form.ImagenUrl" alt="preview" />
+                        </div>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(modalError))
+                {
+                    <div class="alert-error">@modalError</div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                <button class="btn-primary" @onclick="GuardarItem" disabled="@guardando">
+                    @(guardando ? "Guardando..." : (editando ? "Actualizar" : "Crear Plato"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Confirm Delete -->
+@if (mostrarConfirmarEliminar && itemAEliminar != null)
+{
+    <div class="modal-overlay" @onclick="() => mostrarConfirmarEliminar = false">
+        <div class="modal modal-sm" @onclick:stopPropagation>
+            <div class="modal-header">
+                <h2>Eliminar Plato</h2>
+                <button class="modal-close" @onclick="() => mostrarConfirmarEliminar = false">×</button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro que deseas eliminar <strong>@itemAEliminar.Nombre</strong>? Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="() => mostrarConfirmarEliminar = false">Cancelar</button>
+                <button class="btn-danger" @onclick="EliminarItem">Eliminar</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    List<string> categorias = MenuService.GetCategorias();
+    List<MenuItem>? todosItems;
+    string filtroCategoria = "";
+
+    bool mostrarModal = false;
+    bool editando = false;
+    bool guardando = false;
+    string modalError = "";
+
+    bool mostrarConfirmarEliminar = false;
+    MenuItem? itemAEliminar;
+
+    MenuItem form = new() { Disponible = true, Categoria = "MENU" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarItems();
+    }
+
+    async Task CargarItems() =>
+        todosItems = await MenuService.GetAllAsync();
+
+    void SetFiltro(string cat) => filtroCategoria = cat;
+
+    string GetLabel(string cat) => MenuService.GetCategoriaLabel(cat);
+
+    void AbrirModalNuevo()
+    {
+        form = new MenuItem { Disponible = true, Categoria = "MENU" };
+        editando = false;
+        modalError = "";
+        mostrarModal = true;
+    }
+
+    void AbrirModalEditar(MenuItem item)
+    {
+        form = new MenuItem
+        {
+            Id = item.Id,
+            Nombre = item.Nombre,
+            Descripcion = item.Descripcion,
+            Precio = item.Precio,
+            Categoria = item.Categoria,
+            ImagenUrl = item.ImagenUrl,
+            Disponible = item.Disponible,
+            Orden = item.Orden
+        };
+        editando = true;
+        modalError = "";
+        mostrarModal = true;
+    }
+
+    void CerrarModal() => mostrarModal = false;
+
+    async Task GuardarItem()
+    {
+        if (string.IsNullOrWhiteSpace(form.Nombre))
+        {
+            modalError = "El nombre es obligatorio.";
+            return;
+        }
+        if (form.Precio <= 0)
+        {
+            modalError = "El precio debe ser mayor a 0.";
+            return;
+        }
+
+        guardando = true;
+        if (editando)
+            await MenuService.UpdateAsync(form);
+        else
+            await MenuService.CreateAsync(form);
+
+        guardando = false;
+        mostrarModal = false;
+        await CargarItems();
+    }
+
+    async Task ToggleDisponibilidad(MenuItem item)
+    {
+        await MenuService.ToggleDisponibilidadAsync(item.Id);
+        await CargarItems();
+    }
+
+    void ConfirmarEliminar(MenuItem item)
+    {
+        itemAEliminar = item;
+        mostrarConfirmarEliminar = true;
+    }
+
+    async Task EliminarItem()
+    {
+        if (itemAEliminar != null)
+        {
+            await MenuService.DeleteAsync(itemAEliminar.Id);
+            mostrarConfirmarEliminar = false;
+            itemAEliminar = null;
+            await CargarItems();
+        }
+    }
+}

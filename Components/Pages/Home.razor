@@ -1,0 +1,101 @@
+@page "/"
+@rendermode RenderMode.InteractiveServer
+@inject MenuService MenuService
+
+<PageTitle>La Casa Peruana - Menú</PageTitle>
+
+<div class="menu-page">
+    <section class="hero">
+        <div class="hero-content">
+            <p class="hero-eyebrow">Bienvenidos</p>
+            <h1 class="hero-title">Sabores que<br/>cuentan historias</h1>
+            <p class="hero-sub">Cocina peruana auténtica, preparada con ingredientes frescos y tradición de generaciones.</p>
+        </div>
+        <div class="hero-scroll-hint">↓</div>
+    </section>
+
+    <div class="category-tabs-wrapper">
+        <div class="category-tabs">
+            @foreach (var cat in categorias)
+            {
+                <button class="@(categoriaActiva == cat ? "tab active" : "tab")"
+                        @onclick="() => SetCategoria(cat)">
+                    @GetLabel(cat)
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (itemsMostrados == null)
+    {
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Cargando el menú...</p>
+        </div>
+    }
+    else if (!itemsMostrados.Any())
+    {
+        <div class="empty-state">
+            <p>No hay platos disponibles en esta categoría por ahora.</p>
+        </div>
+    }
+    else
+    {
+        <section class="menu-section">
+            <div class="section-header">
+                <h2 class="section-title">@GetLabel(categoriaActiva)</h2>
+                <div class="section-line"></div>
+            </div>
+            <div class="menu-grid">
+                @foreach (var item in itemsMostrados)
+                {
+                    <div class="menu-card @(!item.Disponible ? "agotado" : "")">
+                        <div class="card-img-wrap">
+                            <img src="@item.ImagenUrl" alt="@item.Nombre" loading="lazy" />
+                            @if (!item.Disponible)
+                            {
+                                <div class="agotado-badge">Agotado</div>
+                            }
+                        </div>
+                        <div class="card-body">
+                            <h3 class="card-title">@item.Nombre</h3>
+                            <p class="card-desc">@item.Descripcion</p>
+                            <div class="card-footer">
+                                <span class="card-price">S/. @item.Precio.ToString("0.00")</span>
+                                @if (!item.Disponible)
+                                {
+                                    <span class="card-status-tag">No disponible</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    private List<string> categorias = MenuService.GetCategorias();
+    private string categoriaActiva = "MENU";
+    private List<MenuItem>? itemsMostrados;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategoria(categoriaActiva);
+    }
+
+    async Task SetCategoria(string cat)
+    {
+        categoriaActiva = cat;
+        itemsMostrados = null;
+        await LoadCategoria(cat);
+    }
+
+    async Task LoadCategoria(string cat)
+    {
+        itemsMostrados = await MenuService.GetByCategoriaAsync(cat);
+    }
+
+    string GetLabel(string cat) => MenuService.GetCategoriaLabel(cat);
+}

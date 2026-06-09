@@ -1,0 +1,98 @@
+@page "/login"
+@rendermode RenderMode.InteractiveServer
+@inject AuthService AuthService
+@inject NavigationManager Nav
+
+<PageTitle>Iniciar Sesión - La Casa Peruana</PageTitle>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-header">
+            <span class="auth-icon">🍽</span>
+            <h1 class="auth-title">Panel del Restaurante</h1>
+            <p class="auth-subtitle">Ingresa tus credenciales para administrar el menú</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMsg))
+        {
+            <div class="alert-error">
+                <span>⚠</span> @errorMsg
+            </div>
+        }
+
+        <div class="auth-form">
+            <div class="form-group">
+                <label class="form-label">Usuario</label>
+                <input class="form-input"
+                       type="text"
+                       placeholder="usuario"
+                       @bind="username"
+                       @onkeypress="OnKeyPress" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Contraseña</label>
+                <input class="form-input"
+                       type="password"
+                       placeholder="••••••••"
+                       @bind="password"
+                       @onkeypress="OnKeyPress" />
+            </div>
+            <button class="btn-primary btn-full" @onclick="DoLogin" disabled="@loading">
+                @if (loading)
+                {
+                    <span class="spinner-sm"></span>
+                    <span>Verificando...</span>
+                }
+                else
+                {
+                    <span>Ingresar</span>
+                }
+            </button>
+        </div>
+
+        <div class="auth-hint">
+            <p>Credenciales de prueba: <strong>admin</strong> / <strong>admin123</strong></p>
+        </div>
+    </div>
+</div>
+
+@code {
+    string username = "";
+    string password = "";
+    string errorMsg = "";
+    bool loading = false;
+
+    protected override void OnInitialized()
+    {
+        if (AuthService.EstaAutenticado)
+            Nav.NavigateTo("/admin");
+    }
+
+    async Task DoLogin()
+    {
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+        {
+            errorMsg = "Por favor completa todos los campos.";
+            return;
+        }
+
+        loading = true;
+        errorMsg = "";
+
+        var ok = await AuthService.LoginAsync(username.Trim(), password);
+
+        if (ok)
+            Nav.NavigateTo("/admin");
+        else
+        {
+            errorMsg = "Usuario o contraseña incorrectos.";
+            loading = false;
+        }
+    }
+
+    async Task OnKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await DoLogin();
+    }
+}
