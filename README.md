@@ -11,7 +11,7 @@ Blazor Server · ASP.NET Core 8 · SQLite
 ## Run locally
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/CSE325-Team16.git
+git clone https://github.com/LizandroV/CSE325-Team16.git
 cd CSE325-Team16
 dotnet run
 ```
