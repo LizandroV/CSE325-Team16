@@ -16,23 +16,26 @@
     return;
 }
 
+<!-- Toast notification -->
+@if (toastVisible)
+{
+    <div class="toast @toastType">
+        @toastMessage
+    </div>
+}
+
 <div class="admin-page">
     <div class="admin-header">
         <div>
             <h1 class="admin-title">Administración del Menú</h1>
             <p class="admin-sub">Gestiona los platos, precios y disponibilidad.</p>
         </div>
-        <button class="btn-primary" @onclick="AbrirModalNuevo">
-            + Nuevo Plato
-        </button>
+        <button class="btn-primary" @onclick="AbrirModalNuevo">+ Nuevo Plato</button>
     </div>
 
-    <!-- Category Filter -->
     <div class="category-tabs-wrapper">
         <div class="category-tabs">
-            <button class="@(filtroCategoria == "" ? "tab active" : "tab")" @onclick='() => SetFiltro("")'>
-                Todos
-            </button>
+            <button class="@(filtroCategoria == "" ? "tab active" : "tab")" @onclick='() => SetFiltro("")'>Todos</button>
             @foreach (var cat in categorias)
             {
                 <button class="@(filtroCategoria == cat ? "tab active" : "tab")" @onclick="() => SetFiltro(cat)">
@@ -52,6 +55,21 @@
             ? todosItems
             : todosItems.Where(i => i.Categoria == filtroCategoria).ToList();
 
+        <div class="admin-stats">
+            <div class="stat-card">
+                <span class="stat-num">@todosItems.Count</span>
+                <span class="stat-label">Total platos</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-num">@todosItems.Count(i => i.Disponible)</span>
+                <span class="stat-label">Disponibles</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-num">@todosItems.Count(i => !i.Disponible)</span>
+                <span class="stat-label">Agotados</span>
+            </div>
+        </div>
+
         <div class="admin-table-wrap">
             <table class="admin-table">
                 <thead>
@@ -68,9 +86,7 @@
                     @foreach (var item in items)
                     {
                         <tr class="@(!item.Disponible ? "row-agotado" : "")">
-                            <td>
-                                <img class="table-thumb" src="@item.ImagenUrl" alt="@item.Nombre" />
-                            </td>
+                            <td><img class="table-thumb" src="@item.ImagenUrl" alt="@item.Nombre" /></td>
                             <td>
                                 <div class="table-name">@item.Nombre</div>
                                 <div class="table-desc">@(item.Descripcion.Length > 60 ? item.Descripcion[..60] + "…" : item.Descripcion)</div>
@@ -143,7 +159,6 @@
                         </div>
                     }
                 </div>
-
                 @if (!string.IsNullOrEmpty(modalError))
                 {
                     <div class="alert-error">@modalError</div>
@@ -194,17 +209,28 @@
 
     MenuItem form = new() { Disponible = true, Categoria = "MENU" };
 
-    protected override async Task OnInitializedAsync()
-    {
-        await CargarItems();
-    }
+    // Toast
+    bool toastVisible = false;
+    string toastMessage = "";
+    string toastType = "toast-success";
 
-    async Task CargarItems() =>
-        todosItems = await MenuService.GetAllAsync();
+    protected override async Task OnInitializedAsync() => await CargarItems();
+
+    async Task CargarItems() => todosItems = await MenuService.GetAllAsync();
 
     void SetFiltro(string cat) => filtroCategoria = cat;
-
     string GetLabel(string cat) => MenuService.GetCategoriaLabel(cat);
+
+    async Task ShowToast(string message, bool success = true)
+    {
+        toastMessage = message;
+        toastType = success ? "toast-success" : "toast-error";
+        toastVisible = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        toastVisible = false;
+        StateHasChanged();
+    }
 
     void AbrirModalNuevo()
     {
@@ -218,14 +244,9 @@
     {
         form = new MenuItem
         {
-            Id = item.Id,
-            Nombre = item.Nombre,
-            Descripcion = item.Descripcion,
-            Precio = item.Precio,
-            Categoria = item.Categoria,
-            ImagenUrl = item.ImagenUrl,
-            Disponible = item.Disponible,
-            Orden = item.Orden
+            Id = item.Id, Nombre = item.Nombre, Descripcion = item.Descripcion,
+            Precio = item.Precio, Categoria = item.Categoria, ImagenUrl = item.ImagenUrl,
+            Disponible = item.Disponible, Orden = item.Orden
         };
         editando = true;
         modalError = "";
@@ -236,16 +257,8 @@
 
     async Task GuardarItem()
     {
-        if (string.IsNullOrWhiteSpace(form.Nombre))
-        {
-            modalError = "El nombre es obligatorio.";
-            return;
-        }
-        if (form.Precio <= 0)
-        {
-            modalError = "El precio debe ser mayor a 0.";
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(form.Nombre)) { modalError = "El nombre es obligatorio."; return; }
+        if (form.Precio <= 0) { modalError = "El precio debe ser mayor a 0."; return; }
 
         guardando = true;
         if (editando)
@@ -256,28 +269,29 @@
         guardando = false;
         mostrarModal = false;
         await CargarItems();
+        await ShowToast(editando ? "Plato actualizado correctamente." : "Plato creado correctamente.");
     }
 
     async Task ToggleDisponibilidad(MenuItem item)
     {
         await MenuService.ToggleDisponibilidadAsync(item.Id);
         await CargarItems();
+        var msg = item.Disponible ? $"{item.Nombre} marcado como agotado." : $"{item.Nombre} marcado como disponible.";
+        await ShowToast(msg);
     }
 
-    void ConfirmarEliminar(MenuItem item)
-    {
-        itemAEliminar = item;
-        mostrarConfirmarEliminar = true;
-    }
+    void ConfirmarEliminar(MenuItem item) { itemAEliminar = item; mostrarConfirmarEliminar = true; }
 
     async Task EliminarItem()
     {
         if (itemAEliminar != null)
         {
+            var nombre = itemAEliminar.Nombre;
             await MenuService.DeleteAsync(itemAEliminar.Id);
             mostrarConfirmarEliminar = false;
             itemAEliminar = null;
             await CargarItems();
+            await ShowToast($"{nombre} eliminado.");
         }
     }
 }

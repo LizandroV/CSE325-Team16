@@ -14,11 +14,18 @@ public class MenuService
     }
 
     public async Task<List<MenuItem>> GetAllAsync()
-        => await _context.MenuItems.OrderBy(m => m.Orden).ToListAsync();
+        => await _context.MenuItems.OrderBy(m => m.Categoria).ThenBy(m => m.Orden).ToListAsync();
 
     public async Task<List<MenuItem>> GetByCategoriaAsync(string categoria)
         => await _context.MenuItems
             .Where(m => m.Categoria == categoria)
+            .OrderBy(m => m.Orden)
+            .ToListAsync();
+
+    public async Task<List<MenuItem>> SearchAsync(string query)
+        => await _context.MenuItems
+            .Where(m => m.Nombre.ToLower().Contains(query.ToLower()) ||
+                        m.Descripcion.ToLower().Contains(query.ToLower()))
             .OrderBy(m => m.Orden)
             .ToListAsync();
 
@@ -53,7 +60,6 @@ public class MenuService
     {
         var item = await _context.MenuItems.FindAsync(id);
         if (item == null) return false;
-
         item.Disponible = !item.Disponible;
         await _context.SaveChangesAsync();
         return true;
@@ -63,7 +69,6 @@ public class MenuService
     {
         var item = await _context.MenuItems.FindAsync(id);
         if (item == null) return false;
-
         _context.MenuItems.Remove(item);
         await _context.SaveChangesAsync();
         return true;

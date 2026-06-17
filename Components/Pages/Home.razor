@@ -8,70 +8,131 @@
     <section class="hero">
         <div class="hero-content">
             <p class="hero-eyebrow">Bienvenidos</p>
-            <h1 class="hero-title">Sabores que<br/>cuentan historias</h1>
+            <h1 class="hero-title">Sabores que<br />cuentan historias</h1>
             <p class="hero-sub">Cocina peruana auténtica, preparada con ingredientes frescos y tradición de generaciones.</p>
+            <div class="hero-search">
+                <input class="search-input"
+                       type="text"
+                       placeholder="Buscar en el menú..."
+                       @bind="searchQuery"
+                       @bind:event="oninput"
+                       @onkeyup="OnSearch" />
+                @if (!string.IsNullOrEmpty(searchQuery))
+                {
+                    <button class="search-clear" @onclick="ClearSearch">×</button>
+                }
+            </div>
         </div>
         <div class="hero-scroll-hint">↓</div>
     </section>
 
-    <div class="category-tabs-wrapper">
-        <div class="category-tabs">
-            @foreach (var cat in categorias)
+    @if (!string.IsNullOrWhiteSpace(searchQuery))
+    {
+        <!-- Search results -->
+        <section class="menu-section">
+            <div class="section-header">
+                <h2 class="section-title">Resultados para "@searchQuery"</h2>
+                <div class="section-line"></div>
+            </div>
+            @if (searchResults == null)
             {
-                <button class="@(categoriaActiva == cat ? "tab active" : "tab")"
-                        @onclick="() => SetCategoria(cat)">
-                    @GetLabel(cat)
-                </button>
+                <div class="loading-state"><div class="spinner"></div></div>
             }
-        </div>
-    </div>
-
-    @if (itemsMostrados == null)
-    {
-        <div class="loading-state">
-            <div class="spinner"></div>
-            <p>Cargando el menú...</p>
-        </div>
-    }
-    else if (!itemsMostrados.Any())
-    {
-        <div class="empty-state">
-            <p>No hay platos disponibles en esta categoría por ahora.</p>
-        </div>
+            else if (!searchResults.Any())
+            {
+                <div class="empty-state">
+                    <p>No encontramos platos con ese nombre. Intenta con otra búsqueda.</p>
+                </div>
+            }
+            else
+            {
+                <div class="menu-grid">
+                    @foreach (var item in searchResults)
+                    {
+                        <div class="menu-card @(!item.Disponible ? "agotado" : "")">
+                            <div class="card-img-wrap">
+                                <img src="@item.ImagenUrl" alt="@item.Nombre" loading="lazy" />
+                                @if (!item.Disponible)
+                                {
+                                    <div class="agotado-badge">Agotado</div>
+                                }
+                                <span class="cat-label">@MenuService.GetCategoriaLabel(item.Categoria)</span>
+                            </div>
+                            <div class="card-body">
+                                <h3 class="card-title">@item.Nombre</h3>
+                                <p class="card-desc">@item.Descripcion</p>
+                                <div class="card-footer">
+                                    <span class="card-price">S/. @item.Precio.ToString("0.00")</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
     }
     else
     {
-        <section class="menu-section">
-            <div class="section-header">
-                <h2 class="section-title">@GetLabel(categoriaActiva)</h2>
-                <div class="section-line"></div>
-            </div>
-            <div class="menu-grid">
-                @foreach (var item in itemsMostrados)
+        <!-- Category tabs -->
+        <div class="category-tabs-wrapper">
+            <div class="category-tabs">
+                @foreach (var cat in categorias)
                 {
-                    <div class="menu-card @(!item.Disponible ? "agotado" : "")">
-                        <div class="card-img-wrap">
-                            <img src="@item.ImagenUrl" alt="@item.Nombre" loading="lazy" />
-                            @if (!item.Disponible)
-                            {
-                                <div class="agotado-badge">Agotado</div>
-                            }
-                        </div>
-                        <div class="card-body">
-                            <h3 class="card-title">@item.Nombre</h3>
-                            <p class="card-desc">@item.Descripcion</p>
-                            <div class="card-footer">
-                                <span class="card-price">S/. @item.Precio.ToString("0.00")</span>
-                                @if (!item.Disponible)
-                                {
-                                    <span class="card-status-tag">No disponible</span>
-                                }
-                            </div>
-                        </div>
-                    </div>
+                    <button class="@(categoriaActiva == cat ? "tab active" : "tab")"
+                            @onclick="() => SetCategoria(cat)">
+                        @GetLabel(cat)
+                    </button>
                 }
             </div>
-        </section>
+        </div>
+
+        @if (itemsMostrados == null)
+        {
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Cargando el menú...</p>
+            </div>
+        }
+        else if (!itemsMostrados.Any())
+        {
+            <div class="empty-state">
+                <p>No hay platos disponibles en esta categoría por ahora.</p>
+            </div>
+        }
+        else
+        {
+            <section class="menu-section">
+                <div class="section-header">
+                    <h2 class="section-title">@GetLabel(categoriaActiva)</h2>
+                    <div class="section-line"></div>
+                </div>
+                <div class="menu-grid">
+                    @foreach (var item in itemsMostrados)
+                    {
+                        <div class="menu-card @(!item.Disponible ? "agotado" : "")">
+                            <div class="card-img-wrap">
+                                <img src="@item.ImagenUrl" alt="@item.Nombre" loading="lazy" />
+                                @if (!item.Disponible)
+                                {
+                                    <div class="agotado-badge">Agotado</div>
+                                }
+                            </div>
+                            <div class="card-body">
+                                <h3 class="card-title">@item.Nombre</h3>
+                                <p class="card-desc">@item.Descripcion</p>
+                                <div class="card-footer">
+                                    <span class="card-price">S/. @item.Precio.ToString("0.00")</span>
+                                    @if (!item.Disponible)
+                                    {
+                                        <span class="card-status-tag">No disponible</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
     }
 </div>
 
@@ -79,6 +140,10 @@
     private List<string> categorias = MenuService.GetCategorias();
     private string categoriaActiva = "MENU";
     private List<MenuItem>? itemsMostrados;
+
+    private string searchQuery = "";
+    private List<MenuItem>? searchResults;
+    private System.Timers.Timer? _debounce;
 
     protected override async Task OnInitializedAsync()
     {
@@ -95,6 +160,29 @@
     async Task LoadCategoria(string cat)
     {
         itemsMostrados = await MenuService.GetByCategoriaAsync(cat);
+    }
+
+    void OnSearch()
+    {
+        _debounce?.Stop();
+        _debounce?.Dispose();
+        _debounce = new System.Timers.Timer(300);
+        _debounce.Elapsed += async (_, _) =>
+        {
+            _debounce?.Dispose();
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+                searchResults = await MenuService.SearchAsync(searchQuery);
+            await InvokeAsync(StateHasChanged);
+        };
+        _debounce.AutoReset = false;
+        _debounce.Start();
+    }
+
+    async Task ClearSearch()
+    {
+        searchQuery = "";
+        searchResults = null;
+        await LoadCategoria(categoriaActiva);
     }
 
     string GetLabel(string cat) => MenuService.GetCategoriaLabel(cat);

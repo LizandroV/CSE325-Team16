@@ -25,7 +25,6 @@ public class AuthService
             .FirstOrDefaultAsync(u => u.NombreUsuario == username);
 
         if (usuario == null) return false;
-
         if (!BCrypt.Net.BCrypt.Verify(password, usuario.PasswordHash)) return false;
 
         _usuarioActual = usuario;

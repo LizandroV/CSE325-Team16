@@ -6,7 +6,7 @@ public class MenuItem
     public string Nombre { get; set; } = string.Empty;
     public string Descripcion { get; set; } = string.Empty;
     public decimal Precio { get; set; }
-    public string Categoria { get; set; } = string.Empty; // MENU, NUESTROS_PLATOS, ESPECIALES, REFRESCOS
+    public string Categoria { get; set; } = string.Empty;
     public string ImagenUrl { get; set; } = string.Empty;
     public bool Disponible { get; set; } = true;
     public int Orden { get; set; } = 0;
