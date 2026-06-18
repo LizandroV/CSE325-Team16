@@ -1,5 +1,5 @@
 # La Casa Peruana — Restaurant Menu App
-
+https://cse325-team16-production.up.railway.app/admin
 Blazor Server · ASP.NET Core 8 · SQLite
 
 ---
