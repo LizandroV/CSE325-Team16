@@ -1,4 +1,3 @@
-## .NET
 bin/
 obj/
 *.user
@@ -7,18 +6,14 @@ obj/
 *.db
 *.db-shm
 *.db-wal
-
-## Rider
 .idea/
-
-## VS Code
 .vscode/
 !.vscode/extensions.json
-
-## Logs
 logs/
 *.log
-
-## OS
 .DS_Store
 Thumbs.db
+
+## Uploaded images (user content, not source code)
+wwwroot/uploads/*
+!wwwroot/uploads/.gitkeep

@@ -6,13 +6,17 @@ using RestauranteApp.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10 MB, allows image uploads
+    });
 
 builder.Services.AddDbContext<RestauranteDbContext>(options =>
     options.UseSqlite("Data Source=restaurante.db"));
 
 builder.Services.AddScoped<MenuService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<FileUploadService>();
 
 var app = builder.Build();
 

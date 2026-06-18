@@ -2,6 +2,7 @@
 @rendermode RenderMode.InteractiveServer
 @inject MenuService MenuService
 @inject AuthService AuthService
+@inject FileUploadService FileUploadService
 @inject NavigationManager Nav
 
 <PageTitle>Administración - La Casa Peruana</PageTitle>
@@ -148,14 +149,36 @@
                         <input class="form-input" type="number" min="0" @bind="form.Orden" />
                     </div>
                     <div class="form-group form-full">
-                        <label class="form-label">URL de Imagen</label>
-                        <input class="form-input" @bind="form.ImagenUrl" placeholder="https://..." />
+                        <label class="form-label">Foto del plato</label>
+                        <div class="upload-zone">
+                            <InputFile OnChange="OnImageSelected" accept=".jpg,.jpeg,.png,.gif,.webp" class="upload-input" id="fileUpload" />
+                            <label for="fileUpload" class="upload-label">
+                                @if (subiendoImagen)
+                                {
+                                    <span class="spinner-sm"></span>
+                                    <span>Subiendo imagen...</span>
+                                }
+                                else
+                                {
+                                    <span class="upload-icon">📷</span>
+                                    <span>Haz clic para elegir una foto</span>
+                                    <span class="upload-hint">JPG, PNG, GIF o WEBP · máx. 5 MB</span>
+                                }
+                            </label>
+                        </div>
+                        @if (!string.IsNullOrEmpty(uploadError))
+                        {
+                            <div class="alert-error">@uploadError</div>
+                        }
                     </div>
                     @if (!string.IsNullOrEmpty(form.ImagenUrl))
                     {
                         <div class="form-group form-full">
                             <label class="form-label">Vista previa</label>
-                            <img class="img-preview" src="@form.ImagenUrl" alt="preview" />
+                            <div class="preview-wrap">
+                                <img class="img-preview" src="@form.ImagenUrl" alt="preview" />
+                                <button type="button" class="btn-remove-img" @onclick="QuitarImagen">Quitar foto</button>
+                            </div>
                         </div>
                     }
                 </div>
@@ -214,6 +237,11 @@
     string toastMessage = "";
     string toastType = "toast-success";
 
+    // Image upload
+    bool subiendoImagen = false;
+    string uploadError = "";
+    string? imagenAnteriorParaBorrar = null;
+
     protected override async Task OnInitializedAsync() => await CargarItems();
 
     async Task CargarItems() => todosItems = await MenuService.GetAllAsync();
@@ -237,6 +265,8 @@
         form = new MenuItem { Disponible = true, Categoria = "MENU" };
         editando = false;
         modalError = "";
+        uploadError = "";
+        imagenAnteriorParaBorrar = null;
         mostrarModal = true;
     }
 
@@ -250,10 +280,59 @@
         };
         editando = true;
         modalError = "";
+        uploadError = "";
+        imagenAnteriorParaBorrar = null;
         mostrarModal = true;
     }
 
     void CerrarModal() => mostrarModal = false;
+
+    async Task OnImageSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        uploadError = "";
+        subiendoImagen = true;
+        StateHasChanged();
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            var (success, urlOrError) = await FileUploadService.SaveImageAsync(stream, file.Name, file.Size);
+
+            if (success)
+            {
+                // Mark previous local image for cleanup once saved
+                if (!string.IsNullOrEmpty(form.ImagenUrl) && form.ImagenUrl.StartsWith("/uploads/"))
+                    imagenAnteriorParaBorrar = form.ImagenUrl;
+
+                form.ImagenUrl = urlOrError;
+            }
+            else
+            {
+                uploadError = urlOrError;
+            }
+        }
+        catch (Exception)
+        {
+            uploadError = "No se pudo subir la imagen. Intenta con un archivo más pequeño.";
+        }
+        finally
+        {
+            subiendoImagen = false;
+            StateHasChanged();
+        }
+    }
+
+    void QuitarImagen()
+    {
+        if (!string.IsNullOrEmpty(form.ImagenUrl) && form.ImagenUrl.StartsWith("/uploads/"))
+            FileUploadService.DeleteLocalImageIfExists(form.ImagenUrl);
+
+        form.ImagenUrl = "";
+        uploadError = "";
+    }
 
     async Task GuardarItem()
     {
@@ -265,6 +344,13 @@
             await MenuService.UpdateAsync(form);
         else
             await MenuService.CreateAsync(form);
+
+        // Clean up the old image file if it was replaced with a new upload
+        if (!string.IsNullOrEmpty(imagenAnteriorParaBorrar))
+        {
+            FileUploadService.DeleteLocalImageIfExists(imagenAnteriorParaBorrar);
+            imagenAnteriorParaBorrar = null;
+        }
 
         guardando = false;
         mostrarModal = false;
@@ -287,6 +373,7 @@
         if (itemAEliminar != null)
         {
             var nombre = itemAEliminar.Nombre;
+            FileUploadService.DeleteLocalImageIfExists(itemAEliminar.ImagenUrl);
             await MenuService.DeleteAsync(itemAEliminar.Id);
             mostrarConfirmarEliminar = false;
             itemAEliminar = null;
