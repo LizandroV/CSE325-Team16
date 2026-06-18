@@ -21,7 +21,7 @@ Open `http://localhost:5000` in your browser.
 ## Admin login
 
 | Username | Password   |
-|----------|------------|
+| -------- | ---------- |
 | `admin`  | `admin123` |
 
 ---
@@ -53,11 +53,11 @@ CSE325-Team16/
 
 ## Sprints
 
-| Sprint | Goal | Status |
-|--------|------|--------|
-| 1 | Project setup + Public menu | ✅ Done |
-| 2 | Authentication + Admin panel | ✅ Done |
-| 3 | Full CRUD + Availability toggle | ✅ Done |
-| 4 | UX improvements + Search | 🔜 Pending |
-| 5 | User management + Roles | 🔜 Pending |
-| 6 | Deploy + Testing | 🔜 Pending |
+| Sprint | Goal                            | Status  |
+| ------ | ------------------------------- | ------- |
+| 1      | Project setup + Public menu     | ✅ Done |
+| 2      | Authentication + Admin panel    | ✅ Done |
+| 3      | Full CRUD + Availability toggle | ✅ Done |
+| 4      | UX improvements + Search        | ✅ Done |
+| 5      | User management + Roles         | ✅ Done |
+| 6      | Deploy + Testing                | ✅ Done |

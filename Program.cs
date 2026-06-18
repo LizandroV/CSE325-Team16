@@ -6,10 +6,12 @@ using RestauranteApp.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents(options =>
-    {
-        options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10 MB, allows image uploads
-    });
+    .AddInteractiveServerComponents();
+
+builder.Services.Configure<Microsoft.AspNetCore.SignalR.HubOptions>(options =>
+{
+    options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10 MB, allows image uploads
+});
 
 builder.Services.AddDbContext<RestauranteDbContext>(options =>
     options.UseSqlite("Data Source=restaurante.db"));
